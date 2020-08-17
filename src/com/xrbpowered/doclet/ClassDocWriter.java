@@ -19,6 +19,7 @@ import com.sun.javadoc.ParamTag;
 import com.sun.javadoc.Parameter;
 import com.sun.javadoc.Tag;
 import com.sun.javadoc.ThrowsTag;
+import com.sun.javadoc.Type;
 
 public class ClassDocWriter extends HtmlWriter {
 
@@ -39,54 +40,22 @@ public class ClassDocWriter extends HtmlWriter {
 			String.format("<a href=\"index.html\">%s</a>", getPackageName())
 		);
 		
-		// class signature
-		out.printf("<pre>%s", cls.modifiers());
-		if(!cls.isInterface())
-			out.print(cls.isEnum() ? " enum" : " class");
-		out.printf(" <span class=\"name\">%s</span>", cls.name());
-		printTypeParams(out, cls.typeParameters());
-		out.println();
-		if(cls.superclass()!=null
-				&& !cls.superclass().qualifiedName().equals("java.lang.Object")
-				&& !cls.superclass().qualifiedName().equals("java.lang.Enum")) {
-			out.print("extends ");
-			out.print(typeString(cls.superclassType()));
-			out.println();
-		}
-		if(cls.interfaces().length>0) {
-			out.print(cls.isInterface() ? "extends " : "implements ");
-			for(int i=0; i<cls.interfaceTypes().length; i++) {
-				if(i>0) out.print(", ");
-				out.print(typeString(cls.interfaceTypes()[i]));
-			}
-			out.println();
-		}
-		out.println("</pre>");
-		
-		out.println("<dl style=\"margin-bottom:40px\">\n"+
-			"<dt>Hierarchy:</dt><dd>");
-		printHierarchy(cls);
-		out.println("</dd>");
-		if(cls.containingClass()!=null) {
-			out.print("<dt>Enclosing class:</dt><dd>");
-			out.print(classLink(cls.containingClass()));
-			out.println("</dd>");
-		}
-		printKnownSubclasses(out);
-		out.println("</dl>");
+		printClassSignature();
+		printTypeParamComments(cls.typeParamTags());
+		printInfoCard();
 		
 		// class comment
 		printSince(cls);
 		printCommentPar(cls.inlineTags());
 		printSeeTags(cls);
-		
+
 		// summary
 		out.println("<div class=\"summary\">");
 		out.println("<h2>Summary</h2>");
 		printInnerClasses();
 		
 		// do not sort enum constants!
-		printFieldList("Enum constants", Arrays.asList(cls.enumConstants()), true); // TODO collect inherited enum constants
+		printFieldList("Enum constants", Arrays.asList(cls.enumConstants()), true);
 		
 		ArrayList<FieldDoc> allFields = new ArrayList<>();
 		collectInheritedFields(cls, allFields, null);
@@ -102,7 +71,7 @@ public class ClassDocWriter extends HtmlWriter {
 		collectInheritedMethods(cls, allMethods, null);
 		allMethods.sort(methodSort);
 		printSummaryMethods("Abstract Methods", allMethods, Modifier.ABSTRACT, Modifier.STATIC);
-		printSummaryMethods("Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC);
+		printSummaryMethods(cls.isInterface() ? "Interface Methods" : "Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC);
 		printSummaryMethods("Static Methods", allMethods, Modifier.STATIC, 0);
 		
 		out.println("</div>");
@@ -125,6 +94,127 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("</div>");
 		printPageEnd();
 	}
+	
+	private void printClassSignature() {
+		out.printf("<pre>%s", cls.modifiers());
+		if(!cls.isInterface())
+			out.print(cls.isEnum() ? " enum" : " class");
+		out.printf(" <span class=\"name\">%s</span>", cls.name());
+		printTypeParams(cls.typeParameters());
+		out.println();
+		if(cls.superclass()!=null
+				&& !cls.superclass().qualifiedName().equals("java.lang.Object")
+				&& !cls.superclass().qualifiedName().equals("java.lang.Enum")) {
+			out.print("extends ");
+			out.print(typeString(cls.superclassType()));
+			out.println();
+		}
+		if(cls.interfaces().length>0) {
+			out.print(cls.isInterface() ? "extends " : "implements ");
+			for(int i=0; i<cls.interfaceTypes().length; i++) {
+				if(i>0) out.print(", ");
+				out.print(typeString(cls.interfaceTypes()[i]));
+			}
+			out.println();
+		}
+		out.println("</pre>");
+	}
+	
+	private void printInfoCard() {
+		PrintStream oldOut = beginTmpOut(); 
+		printClassHierarchy();
+		printSuperinterfaces();
+		if(cls.containingClass()!=null) {
+			out.print("<dt>Enclosing class:</dt><dd>");
+			out.print(classLink(cls.containingClass()));
+			out.println("</dd>");
+		}
+		printKnownSubclasses();
+		String infoCard = endTmpOut(oldOut);
+		if(!infoCard.isEmpty()) {
+			out.println("<div class=\"infocard\"><dl>");
+			out.print(infoCard);
+			out.println("</dl></div>");
+		}
+	}
+
+	private void printHierarchy(Type t) {
+		ClassDoc c = t.asClassDoc();
+		if(c!=null && c.superclass()!=null) {
+			printHierarchy(c.superclassType());
+			out.println(" &#11208;");
+		}
+		out.print("<code>");
+		if(c==cls) {
+			out.print(cls.name());
+			printTypeParams(cls.typeParameters());
+		}
+		else
+			out.print(typeString(t));
+		out.print("</code>");
+	}
+
+	private void printClassHierarchy() {
+		if(cls.isInterface())
+			return;
+		out.println("<dt>Hierarchy:</dt><dd>");
+		printHierarchy(cls);
+		out.println("</dd>");
+	}
+	
+	private void collectSuperInterfaces(ClassDoc c, List<ClassDoc> out, HashSet<ClassDoc> uniques) {
+		if(uniques==null)
+			uniques = new HashSet<>();
+		if(c.superclass()!=null) {
+			ClassDoc sup = c.superclass();
+			if(sup.isInterface() && !uniques.contains(sup))
+				out.add(sup);
+			collectSuperInterfaces(sup, out, uniques);
+		}
+		for(ClassDoc sup : c.interfaces()) {
+			if(sup.isInterface() && !uniques.contains(sup))
+				out.add(sup);
+			collectSuperInterfaces(sup, out, uniques);
+		}
+	}
+	
+	private void printSuperinterfaces() {
+		List<ClassDoc> list = new ArrayList<>();
+		collectSuperInterfaces(cls, list, null);
+		list.sort(classSort);
+		
+		if(!list.isEmpty()) {
+			out.printf("<dt>All %s:</dt><dd>", cls.isInterface() ? "superinterfaces" : "implemented interfaces");
+			printPlainClassList(list);
+			out.println("</dd>");
+		}
+	}
+	
+	private void printKnownSubclasses() {
+		if(cls.isInterface())
+			return;
+		List<ClassDoc> list = new ArrayList<>();
+		for(ClassDoc c : Doclet.listedClasses) {
+			if(c.superclass()==this.cls)
+				list.add(c);
+		}
+		if(!list.isEmpty()) {
+			list.sort(classSort);
+			out.print("<dt>Known direct subclasses:</dt><dd>");
+			printPlainClassList(list);
+			out.println("</dd>");
+		}
+	}
+	
+	private void printPlainClassList(List<ClassDoc> list) {
+		boolean first = true;
+		for(ClassDoc c : list) {
+			if(!first) out.print(", ");
+			out.print(classLink(c));
+			printTypeParams(c.typeParameters(), true);
+			first = false;
+		}
+	}
 
 	private void printSummaryFields(String title, List<? extends FieldDoc> list, int mods, int noMods) {
 		ArrayList<FieldDoc> fields = new ArrayList<>();
@@ -140,43 +230,14 @@ public class ClassDocWriter extends HtmlWriter {
 		ArrayList<ExecutableMemberDoc> mets = new ArrayList<>();
 		for(ExecutableMemberDoc met : list) {
 			int m = met.modifierSpecifier();
+			if(!cls.isInterface() && met.containingClass().isInterface())
+				m |= Modifier.ABSTRACT;
 			if((m&mods)==mods && (m&noMods)==0)
 				mets.add(met);
 		}
 		printMethodList(title, mets);
 	}
-	
-	private void printHierarchy(ClassDoc c) {
-		ClassDoc parent = c.superclass();
-		if(parent!=null) {
-			printHierarchy(parent);
-			out.println(" &#11208;");
-		}
-		out.print("<code>");
-		out.print((c==this.cls) ? c.name() : typeString(c));
-		printTypeParams(out, c.typeParameters());
-		out.print("</code>");
-	}
-	
-	private void printKnownSubclasses(PrintStream out) {
-		List<ClassDoc> list = new ArrayList<>();
-		for(ClassDoc c : Doclet.listedClasses) {
-			if(c.superclass()==this.cls)
-				list.add(c);
-		}
-		if(!list.isEmpty()) {
-			list.sort(classSort);
-			out.print("<dt>Known direct subclasses:</dt><dd>");
-			boolean first = true;
-			for(ClassDoc c : list) {
-				if(!first) out.print(", ");
-				out.print(classLink(c));
-				first = false;
-			}
-			out.println("</dd>");
-		}
-	}
-	
+
 	private void printInnerClasses() {
 		if(cls.innerClasses().length==0)
 			return;
@@ -198,7 +259,7 @@ public class ClassDocWriter extends HtmlWriter {
 			out.println("</td><td>");
 			
 			out.printf("<code><span class=\"name\">%s</span>", classLink(c));
-			printTypeParams(out, c.typeParameters());
+			printTypeParams(c.typeParameters());
 			out.print("</code>\n");
 			
 			Tag[] info = c.firstSentenceTags();
@@ -221,10 +282,12 @@ public class ClassDocWriter extends HtmlWriter {
 			out.add(m); 
 			if(m.overriddenClass()!=null)
 				overrides.add(m.overriddenMethod());
+			// FIXME also needs the list of implemented abstract/iface methods to work correctly
 		}
 		if(c.superclass()!=null)
 			collectInheritedMethods(c.superclass(), out, overrides);
-		// FIXME inherit from interfaces
+		for(ClassDoc imp : c.interfaces())
+			collectInheritedMethods(imp, out, overrides);
 	}
 	
 	private void collectInheritedFields(ClassDoc c, List<FieldDoc> out, HashSet<String> hideMask) {
@@ -238,7 +301,8 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		if(c.superclass()!=null)
 			collectInheritedFields(c.superclass(), out, hideMask);
-		// FIXME inherit from interfaces
+		for(ClassDoc imp : c.interfaces())
+			collectInheritedFields(imp, out, hideMask);
 	}
 	
 	public static boolean isDefaultConstructor(ExecutableMemberDoc met) {
@@ -294,7 +358,7 @@ public class ClassDocWriter extends HtmlWriter {
 				out.printf("<code><span class=\"name\"><a href=\"#%s\">%s</a></span>",
 						memberAnchor(fld), fld.name());
 			out.print("</code>\n");
-			
+
 			if(inherited)
 				out.printf("<br/>Inherited from <code>%s</code>.", typeString(fld.containingClass()));
 			else {
@@ -324,7 +388,10 @@ public class ClassDocWriter extends HtmlWriter {
 		int i = 0;
 		boolean hasMods = false;
 		for(ExecutableMemberDoc met : list) {
-			mods[i] = Modifier.toString(met.modifierSpecifier() & ~Modifier.PUBLIC);
+			int m = met.modifierSpecifier() & ~Modifier.PUBLIC;
+			if(!cls.isInterface() && met.containingClass().isInterface())
+				m |= Modifier.ABSTRACT;
+			mods[i] = Modifier.toString(m);
 			if(met.isMethod() || !mods[i].isEmpty() || met.typeParameters().length>0)
 				hasMods = true;
 			i++;
@@ -357,7 +424,7 @@ public class ClassDocWriter extends HtmlWriter {
 					out.print(mods[i]);
 					out.print(" ");
 				}
-				printTypeParams(out, met.typeParameters());
+				printTypeParams(met.typeParameters());
 				if(met.isMethod())
 					out.print(typeString(((MethodDoc) met).returnType()));
 				out.println("</code></td>");
@@ -423,7 +490,7 @@ public class ClassDocWriter extends HtmlWriter {
 		out.printf("<h3><a class=\"alink\" id=\"%s\" href=\"#%s\">%s</a></h3>\n", anchor, anchor, met.name());
 		
 		out.printf("<pre>%s ", met.modifiers());
-		printTypeParams(out, met.typeParameters());
+		printTypeParams(met.typeParameters());
 		if(met.isMethod()) {
 			out.print(typeString(((MethodDoc) met).returnType()));
 			out.print(" ");
@@ -432,19 +499,17 @@ public class ClassDocWriter extends HtmlWriter {
 		printMethodSignature(met, true, false);
 		out.println(");</pre>");
 		
+		if(met.isMethod()) {
+			MethodDoc ovr = ((MethodDoc) met).overriddenMethod();
+			if(ovr!=null)
+				out.printf("<p><i>Overrides</i> <code>%s</code></p>", memberLink(ovr));
+			// TODO add "implements method" link
+		}
+		
 		printSince(met);
 		printCommentPar(met.inlineTags());
 		
-		if(met.typeParamTags().length>0) {
-			out.println("<h5>Type parameters</h5>");
-			out.println("<dl class=\"code\">");
-			for(ParamTag t : met.typeParamTags()) {
-				out.printf("<dt><code>%s</code></dt><dd>", t.parameterName());
-				printCommentText(t.inlineTags());
-				out.println("</dd>");
-			}
-			out.println("</dl>");
-		}
+		printTypeParamComments(met.typeParamTags());
 		if(met.paramTags().length>0) {
 			out.println("<h5>Parameters</h5>");
 			out.println("<dl class=\"code\">");
@@ -475,6 +540,19 @@ public class ClassDocWriter extends HtmlWriter {
 		
 		printSeeTags(met);
 		out.println("</div>");
+	}
+	
+	private void printTypeParamComments(ParamTag[] ptags) {
+		if(ptags.length>0) {
+			out.println("<h5>Type parameters</h5>");
+			out.println("<dl class=\"code\">");
+			for(ParamTag t : ptags) {
+				out.printf("<dt><code>%s</code></dt><dd>", t.parameterName());
+				printCommentText(t.inlineTags());
+				out.println("</dd>");
+			}
+			out.println("</dl>");
+		}
 	}
 	
 	private void printMethodSignature(ExecutableMemberDoc met, boolean multiline, boolean skipNames) {

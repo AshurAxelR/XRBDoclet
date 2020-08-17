@@ -1,8 +1,12 @@
 package com.xrbpowered.doclet;
 
+import static com.xrbpowered.doclet.WriterUtils.*;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -16,17 +20,36 @@ import com.sun.javadoc.SeeTag;
 import com.sun.javadoc.Tag;
 import com.sun.javadoc.Type;
 import com.sun.javadoc.TypeVariable;
-
-import static com.xrbpowered.doclet.WriterUtils.*;
+import com.sun.javadoc.WildcardType;
 
 public abstract class HtmlWriter {
 
 	public PrintStream out;
-
+	private ByteArrayOutputStream bytes = null;
+	
 	public abstract void print();
 	protected abstract Doc doc();
 	protected abstract String getFilename();
 
+	protected PrintStream beginTmpOut() {
+		bytes = new ByteArrayOutputStream();
+		PrintStream old = out;
+		out = new PrintStream(bytes);
+		return old;
+	}
+	
+	protected String endTmpOut(PrintStream old) {
+		String s;
+		try {
+			s = bytes.toString("UTF-8");
+		} catch(UnsupportedEncodingException e) {
+			s = "";
+		}
+		out.close();
+		out = old;
+		return s;
+	}
+	
 	protected void printPageStart(String title, String... navLinks) {
 		String rootLink = link().rootLink();
 		
@@ -150,17 +173,48 @@ public abstract class HtmlWriter {
 	}
 
 	public String typeString(Type type) {
-		return typeString(type, false);
+		return typeString(type, false, true);
 	}
 
+	private void appendTypeVarBounds(StringBuilder sb, String keyword, Type[] bounds) {
+		if(bounds.length>0) {
+			sb.append(" ");
+			sb.append(keyword);
+			sb.append(" ");
+			for(int i=0; i<bounds.length; i++) {
+				if(i>0) sb.append(" & ");
+				sb.append(typeString(bounds[i], false, true));
+			}
+		}
+	}
+	
 	public String typeString(Type type, boolean isVarArg) {
+		return typeString(type, isVarArg, true);
+	}
+	
+	public String typeString(Type type, boolean isVarArg, boolean compact) {
+		// Some methods can return null type, which should be handled outside this method.
+		// Checking here only for safety.
 		if(type==null)
-			return "<b>??</b>"; // FIXME can be null for type parameters
-		
-		if(type.asTypeVariable()!=null || type.asWildcardType()!=null)
-			return type.typeName();
+			return "";
 		
 		StringBuilder sb = new StringBuilder(); 
+		WildcardType wt = type.asWildcardType();
+		if(wt!=null) {
+			sb.append(type.typeName());
+			appendTypeVarBounds(sb, "extends", wt.extendsBounds());
+			appendTypeVarBounds(sb, "super", wt.superBounds());
+			return sb.toString();
+		}
+		TypeVariable tv = type.asTypeVariable();
+		if(tv!=null) {
+			String n = type.typeName();
+			sb.append(n);
+			if(!compact)
+				appendTypeVarBounds(sb, "extends", tv.bounds());
+			return sb.toString();
+		}
+		
 		if(type.isPrimitive())
 			sb.append(type.typeName());
 		else {
@@ -177,7 +231,7 @@ public abstract class HtmlWriter {
 			for(int i=0; i<pars.length; i++) {
 				if(i>0)
 					sb.append(", ");
-				sb.append(typeString(pars[i]));
+				sb.append(typeString(pars[i], false, compact));
 			}
 			sb.append("&gt;");
 		}
@@ -187,13 +241,17 @@ public abstract class HtmlWriter {
 			sb.append(type.dimension());
 		return sb.toString();
 	}
-	
-	public void printTypeParams(PrintStream out, TypeVariable[] tpars) {
+
+	public void printTypeParams(TypeVariable[] tpars) {
+		printTypeParams(tpars, false);
+	}
+
+	public void printTypeParams(TypeVariable[] tpars, boolean compact) {
 		if(tpars!=null && tpars.length>0) {
 			out.print("&lt;");
 			for(int i=0; i<tpars.length; i++) {
 				if(i>0) out.print(", ");
-				out.print(typeString(tpars[i]));
+				out.print(typeString(tpars[i], false, compact));
 			}
 			out.print("&gt; ");
 		}

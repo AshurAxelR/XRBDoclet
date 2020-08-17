@@ -78,7 +78,7 @@ public class PackageDocWriter extends HtmlWriter {
 			}
 			out.println("<td class=\"mods\">");
 			out.printf("<code><span class=\"name\">%s</span>", classLink(c));
-			printTypeParams(out, c.typeParameters()); // TODO compact type parameters
+			printTypeParams(c.typeParameters(), true); // TODO compact type parameters
 			out.print("</code>");
 			out.print("</td><td>\n");
 			Tag[] info = c.firstSentenceTags();
