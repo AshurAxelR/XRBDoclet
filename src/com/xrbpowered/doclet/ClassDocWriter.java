@@ -6,7 +6,9 @@ import java.io.PrintStream;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 
 import com.sun.javadoc.ClassDoc;
@@ -68,7 +70,8 @@ public class ClassDocWriter extends HtmlWriter {
 		printSummaryMethods("Constructors", Arrays.asList(cls.constructors()), 0, 0);
 
 		ArrayList<MethodDoc> allMethods = new ArrayList<>();
-		collectInheritedMethods(cls, allMethods, null);
+		HashMap<MethodDoc, MethodDoc> overrides = new HashMap<>();
+		collectInheritedMethods(cls, allMethods, overrides);
 		allMethods.sort(methodSort);
 		printSummaryMethods("Abstract Methods", allMethods, Modifier.ABSTRACT, Modifier.STATIC);
 		printSummaryMethods(cls.isInterface() ? "Interface Methods" : "Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC);
@@ -86,10 +89,10 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		for(ConstructorDoc con : cls.constructors()) {
 			if(!isDefaultConstructor(con))
-				printMethodDetails(con);
+				printMethodDetails(con, null);
 		}
 		for(MethodDoc met : cls.methods()) {
-			printMethodDetails(met);
+			printMethodDetails(met, overrides.get(met));
 		}
 		out.println("</div>");
 		printPageEnd();
@@ -162,18 +165,22 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("</dd>");
 	}
 	
-	private void collectSuperInterfaces(ClassDoc c, List<ClassDoc> out, HashSet<ClassDoc> uniques) {
+	private void collectSuperInterfaces(ClassDoc c, List<ClassDoc> out, HashSet<String> uniques) {
 		if(uniques==null)
 			uniques = new HashSet<>();
 		if(c.superclass()!=null) {
 			ClassDoc sup = c.superclass();
-			if(sup.isInterface() && !uniques.contains(sup))
+			if(sup.isInterface() && !uniques.contains(sup)) {
+				uniques.add(sup.qualifiedName());
 				out.add(sup);
+			}
 			collectSuperInterfaces(sup, out, uniques);
 		}
 		for(ClassDoc sup : c.interfaces()) {
-			if(sup.isInterface() && !uniques.contains(sup))
+			if(sup.isInterface() && !uniques.contains(sup)) {
+				uniques.add(sup.qualifiedName());
 				out.add(sup);
+			}
 			collectSuperInterfaces(sup, out, uniques);
 		}
 	}
@@ -273,21 +280,21 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("</div>");
 	}
 	
-	private void collectInheritedMethods(ClassDoc c, List<MethodDoc> out, HashSet<MethodDoc> overrides) {
-		if(overrides==null)
-			overrides = new HashSet<>();
-		for(MethodDoc m : c.methods()) {
-			if(overrides.contains(m))
-				continue;
-			out.add(m); 
-			if(m.overriddenClass()!=null)
-				overrides.add(m.overriddenMethod());
-			// FIXME also needs the list of implemented abstract/iface methods to work correctly
-		}
+	private void collectInheritedMethods(ClassDoc c, List<MethodDoc> out, HashMap<MethodDoc, MethodDoc> overrides) {
 		if(c.superclass()!=null)
 			collectInheritedMethods(c.superclass(), out, overrides);
 		for(ClassDoc imp : c.interfaces())
 			collectInheritedMethods(imp, out, overrides);
+		for(MethodDoc cm : c.methods()) {
+			for(Iterator<MethodDoc> i=out.iterator(); i.hasNext();) {
+				MethodDoc m = i.next();
+				if(cm.overrides(m)) {
+					overrides.put(cm, m);
+					i.remove();
+				}
+			}
+			out.add(cm);
+		}
 	}
 	
 	private void collectInheritedFields(ClassDoc c, List<FieldDoc> out, HashSet<String> hideMask) {
@@ -484,7 +491,7 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("</div>");
 	}
 	
-	private void printMethodDetails(ExecutableMemberDoc met) {
+	private void printMethodDetails(ExecutableMemberDoc met, MethodDoc overriden) {
 		String anchor = methodAnchor(met);
 		out.println("<div class=\"member\">");
 		out.printf("<h3><a class=\"alink\" id=\"%s\" href=\"#%s\">%s</a></h3>\n", anchor, anchor, met.name());
@@ -499,14 +506,27 @@ public class ClassDocWriter extends HtmlWriter {
 		printMethodSignature(met, true, false);
 		out.println(");</pre>");
 		
-		if(met.isMethod()) {
-			MethodDoc ovr = ((MethodDoc) met).overriddenMethod();
-			if(ovr!=null)
-				out.printf("<p><i>Overrides</i> <code>%s</code></p>", memberLink(ovr));
-			// TODO add "implements method" link
+		printSince(met);
+		
+		if(overriden!=null) {
+			out.printf("<p class=\"overrides\">%s <code>%s</code></p>\n",
+					overriden.isAbstract() || overriden.containingClass().isInterface() ? "Implements" : "Overrides",
+					memberLink(overriden));
+			
+			if(met.inlineTags().length==0 && met.tags().length==0)
+				met = overriden;
 		}
 		
-		printSince(met);
+		if(met.inlineTags().length==0 && met.tags().length==0) {
+			// TODO special case: static Enum.values and Enum.valueOf
+			if(met.isMethod() && met.containingClass().isEnum()) {
+				if(met.isStatic() && met.name().equals("values") && met.signature().equals("()")) {
+				}
+				else if(met.isStatic() && met.name().equals("valueOf") && met.signature().equals("(java.lang.String)")) {
+				}
+			}
+		}
+
 		printCommentPar(met.inlineTags());
 		
 		printTypeParamComments(met.typeParamTags());
