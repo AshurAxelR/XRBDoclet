@@ -2,12 +2,14 @@ package com.xrbpowered.doclet;
 
 import java.util.Comparator;
 
+import com.sun.javadoc.AnnotationDesc;
 import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.ExecutableMemberDoc;
 import com.sun.javadoc.MemberDoc;
 import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.PackageDoc;
 import com.sun.javadoc.Parameter;
+import com.sun.javadoc.ProgramElementDoc;
 import com.sun.javadoc.Type;
 
 public class WriterUtils {
@@ -100,6 +102,14 @@ public class WriterUtils {
 			return mem.name();
 	}
 
+	public static boolean isDeprecated(ProgramElementDoc doc) {
+		for(AnnotationDesc ann : doc.annotations()) {
+			if(ann.annotationType().qualifiedName().equals("java.lang.Deprecated"))
+				return true;
+		}
+		return doc.tags("@deprecated").length>0;
+	}
+	
 	public static ExecutableMemberDoc getReplacementDoc(ExecutableMemberDoc met, MethodDoc overriden) {
 		if(overriden!=null)
 			return overriden;

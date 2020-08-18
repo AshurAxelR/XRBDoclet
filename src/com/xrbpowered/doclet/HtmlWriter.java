@@ -145,16 +145,19 @@ public abstract class HtmlWriter {
 	}
 
 	public String classLink(ClassDoc cls) {
+		String name = cls.name();
+		if(cls.isAnnotationType())
+			name = "@"+name;
 		if(Doclet.listedClasses.contains(cls))
 			return String.format("<a href=\"%s\" title=\"%s\">%s</a>",
-					link().relativeLink(cls), cls.qualifiedName(), cls.name());
+					link().relativeLink(cls), cls.qualifiedName(), name);
 		else
-			return String.format("<a class=\"extern\" title=\"%s\">%s</a>", cls.qualifiedName(), cls.name());
+			return String.format("<a class=\"extern\" title=\"%s\">%s</a>", cls.qualifiedName(), name);
 	}
 
 	public String memberLink(MemberDoc mem) {
 		ClassDoc cls = mem.containingClass();
-		boolean sameClass = doc()==cls;
+		boolean sameClass = doc()==cls || mem.isEnumConstant();
 		
 		String title = mem.qualifiedName();
 		String label = sameClass ? mem.name() : String.format("%s.%s", cls.name(), mem.name());

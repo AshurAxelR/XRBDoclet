@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
+import com.sun.javadoc.AnnotationDesc;
+import com.sun.javadoc.AnnotationValue;
 import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.ConstructorDoc;
 import com.sun.javadoc.Doc;
@@ -18,6 +20,7 @@ import com.sun.javadoc.FieldDoc;
 import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.ParamTag;
 import com.sun.javadoc.Parameter;
+import com.sun.javadoc.ProgramElementDoc;
 import com.sun.javadoc.Tag;
 import com.sun.javadoc.ThrowsTag;
 import com.sun.javadoc.Type;
@@ -47,6 +50,7 @@ public class ClassDocWriter extends HtmlWriter {
 		
 		// class comment
 		printSince(cls);
+		printDeprecatedInfo(cls);
 		printCommentPar(cls.inlineTags());
 		printSeeTags(cls);
 
@@ -103,8 +107,13 @@ public class ClassDocWriter extends HtmlWriter {
 	}
 	
 	private void printClassSignature() {
-		out.printf("<pre>%s", cls.modifiers());
-		if(!cls.isInterface())
+		out.print("<pre>");
+		printAnnotations(cls);
+		if(cls.isAnnotationType())
+			out.print(cls.modifiers().replace("interface", "@interface"));
+		else
+			out.print(cls.modifiers());
+		if(!cls.isInterface() && !cls.isAnnotationType())
 			out.print(cls.isEnum() ? " enum" : " class");
 		out.printf(" <span class=\"name\">%s</span>", cls.name());
 		printTypeParams(cls.typeParameters());
@@ -373,7 +382,9 @@ public class ClassDocWriter extends HtmlWriter {
 						memberAnchor(fld), fld.name());
 			out.print("</code>\n");
 
-			if(inherited)
+			if(isDeprecated(fld))
+				out.print("<br/><span class=\"depr\">Deprecated</span>");
+			else if(inherited)
 				out.printf("<br/>Inherited from <code>%s</code>.", typeString(fld.containingClass()));
 			else {
 				Tag[] info = fld.firstSentenceTags();
@@ -457,7 +468,9 @@ public class ClassDocWriter extends HtmlWriter {
 			printMethodSignature(met, false, unknown);
 			out.print(")</code>\n");
 			
-			if(defaultConstructor)
+			if(isDeprecated(met))
+				out.print("<br/><span class=\"depr\">Deprecated</span>");
+			else if(defaultConstructor)
 				out.print("<br/>Default constructor.");
 			else if(inherited)
 				out.printf("<br/>Inherited from <code>%s</code>.", typeString(met.containingClass()));
@@ -490,7 +503,10 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("<div class=\"member\">");
 		out.printf("<h3><a class=\"alink\" id=\"%s\" href=\"#%s\">%s</a></h3>\n", anchor, anchor, fld.name());
 		
-		out.printf("<pre>%s ", fld.modifiers());
+		out.print("<pre>");
+		printAnnotations(fld);
+		out.print(fld.modifiers());
+		out.print(" ");
 		out.print(typeString(fld.type()));
 		out.print(" ");
 		out.printf("<span class=\"name\">%s</span>", fld.name());
@@ -502,6 +518,7 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println(";</pre>");
 		
 		printSince(fld);
+		printDeprecatedInfo(fld);
 		printCommentPar(fld.inlineTags());
 		
 		printSeeTags(fld);
@@ -513,7 +530,10 @@ public class ClassDocWriter extends HtmlWriter {
 		out.println("<div class=\"member\">");
 		out.printf("<h3><a class=\"alink\" id=\"%s\" href=\"#%s\">%s</a></h3>\n", anchor, anchor, met.name());
 		
-		out.printf("<pre>%s ", met.modifiers());
+		out.print("<pre>");
+		printAnnotations(met);
+		out.print(met.modifiers());
+		out.print(" ");
 		printTypeParams(met.typeParameters());
 		if(met.isMethod()) {
 			out.print(typeString(((MethodDoc) met).returnType()));
@@ -543,6 +563,7 @@ public class ClassDocWriter extends HtmlWriter {
 			met = getReplacementDoc(met, null);
 		}
 
+		printDeprecatedInfo(met);
 		printCommentPar(met.inlineTags());
 		
 		printTypeParamComments(met.typeParamTags());
@@ -576,6 +597,58 @@ public class ClassDocWriter extends HtmlWriter {
 		
 		printSeeTags(met);
 		out.println("</div>");
+	}
+
+	protected String annotationValueString(AnnotationValue v) {
+		Object obj = v.value();
+		if(obj instanceof Type)
+			return typeString((Type) obj);
+		else if(obj instanceof FieldDoc)
+			return memberLink((FieldDoc) obj);
+		else if(obj instanceof AnnotationDesc)
+			return typeString(((AnnotationDesc) obj).annotationType());
+		else if(obj instanceof AnnotationValue[]) {
+			StringBuilder sb = new StringBuilder();
+			sb.append("{");
+			AnnotationValue[] vals = (AnnotationValue[]) obj;
+			boolean first = true;
+			for(AnnotationValue val : vals) {
+				if(!first) sb.append(", ");
+				sb.append(annotationValueString(val));
+				first = false;
+			}
+			sb.append("}");
+			return sb.toString();
+		}
+		else
+			return obj.toString();
+	}
+
+	protected void printAnnotations(ProgramElementDoc doc) {
+		for(AnnotationDesc ann : doc.annotations()) {
+			out.print(typeString(ann.annotationType()));
+			if(ann.elementValues().length>0) {
+				out.print("(");
+				boolean first = true;
+				for(AnnotationDesc.ElementValuePair ev : ann.elementValues()) {
+					if(!first) out.print(", ");
+					out.printf("%s=%s", ev.element().name(), annotationValueString(ev.value()));
+					first = false;
+				}
+				out.print(")");
+			}
+			out.println();
+		}
+	}
+	
+	protected void printDeprecatedInfo(ProgramElementDoc doc) {
+		if(isDeprecated(doc)) {
+			out.println("<div class=\"depr\"><p><span class=\"depr\">Deprecated.</span>");
+			for(Tag t : doc.tags("@deprecated")) {
+				printCommentPar(t.inlineTags());
+			}
+			out.println("</div>");
+		}
 	}
 	
 	private void printTypeParamComments(ParamTag[] ptags) {

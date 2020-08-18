@@ -83,9 +83,13 @@ public class PackageDocWriter extends HtmlWriter {
 			printTypeParams(c.typeParameters(), true); // TODO compact type parameters
 			out.print("</code>");
 			out.print("</td><td>\n");
-			Tag[] info = c.firstSentenceTags();
-			if(info!=null && info.length>0)
-				printCommentText(info);
+			if(isDeprecated(c))
+				out.print("<span class=\"depr\">Deprecated</span>");
+			else {
+				Tag[] info = c.firstSentenceTags();
+				if(info.length>0)
+					printCommentText(info);
+			}
 			out.println("</td></tr>");
 			
 			i++;
