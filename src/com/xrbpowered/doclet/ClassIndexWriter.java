@@ -10,6 +10,8 @@ import com.sun.javadoc.Doc;
 
 public class ClassIndexWriter extends HtmlWriter {
 
+	public static final String filename = "allclasses";
+	
 	public final List<ClassDoc> classList;
 	
 	public ClassIndexWriter(ClassDoc[] list) {
@@ -41,7 +43,7 @@ public class ClassIndexWriter extends HtmlWriter {
 
 	@Override
 	protected String getFilename() {
-		return "allclasses";
+		return filename;
 	}
 	
 }

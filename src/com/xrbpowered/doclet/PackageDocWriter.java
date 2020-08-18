@@ -12,6 +12,8 @@ import static com.xrbpowered.doclet.WriterUtils.*;
 
 public class PackageDocWriter extends HtmlWriter {
 
+	public static final String filename = "package-summary"; 
+	
 	public final PackageDoc pkg;
 	
 	public PackageDocWriter(PackageDoc pkg) {
@@ -104,7 +106,7 @@ public class PackageDocWriter extends HtmlWriter {
 
 	@Override
 	protected String getFilename() {
-		return "index";
+		return filename;
 	}
 
 }

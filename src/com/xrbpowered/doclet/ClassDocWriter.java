@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 
 import com.sun.javadoc.ClassDoc;
@@ -39,7 +38,7 @@ public class ClassDocWriter extends HtmlWriter {
 	@Override
 	public void print() {
 		printPageStart(cls.name(),
-			String.format("<a href=\"index.html\">%s</a>", getPackageName())
+			String.format("<a href=\"%s.html\">%s</a>", PackageDocWriter.filename, getPackageName())
 		);
 		
 		printClassSignature();
@@ -52,30 +51,35 @@ public class ClassDocWriter extends HtmlWriter {
 		printSeeTags(cls);
 
 		// summary
+		boolean sum = false;
 		out.println("<div class=\"summary\">");
 		out.println("<h2>Summary</h2>");
-		printInnerClasses();
+		sum |= printInnerClasses();
 		
 		// do not sort enum constants!
-		printFieldList("Enum constants", Arrays.asList(cls.enumConstants()), true);
+		sum |= printFieldList("Enum constants", Arrays.asList(cls.enumConstants()), true);
 		
 		ArrayList<FieldDoc> allFields = new ArrayList<>();
 		collectInheritedFields(cls, allFields, null);
 		allFields.sort(memberSort);
-		printSummaryFields("Constants", allFields, Modifier.STATIC | Modifier.FINAL, 0);
-		printSummaryFields("Static Fields", allFields, Modifier.STATIC, Modifier.FINAL);
-		printSummaryFields("Instance Fields", allFields, 0, Modifier.STATIC);
+		sum |= printSummaryFields("Constants", allFields, Modifier.STATIC | Modifier.FINAL, 0);
+		sum |= printSummaryFields("Static Fields", allFields, Modifier.STATIC, Modifier.FINAL);
+		sum |= printSummaryFields("Instance Fields", allFields, 0, Modifier.STATIC);
 		
 		Arrays.sort(cls.constructors(), methodSort);
-		printSummaryMethods("Constructors", Arrays.asList(cls.constructors()), 0, 0);
+		sum |= printSummaryMethods("Constructors", Arrays.asList(cls.constructors()), 0, 0, null);
 
 		ArrayList<MethodDoc> allMethods = new ArrayList<>();
 		HashMap<MethodDoc, MethodDoc> overrides = new HashMap<>();
 		collectInheritedMethods(cls, allMethods, overrides);
 		allMethods.sort(methodSort);
-		printSummaryMethods("Abstract Methods", allMethods, Modifier.ABSTRACT, Modifier.STATIC);
-		printSummaryMethods(cls.isInterface() ? "Interface Methods" : "Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC);
-		printSummaryMethods("Static Methods", allMethods, Modifier.STATIC, 0);
+		sum |= printSummaryMethods("Abstract Methods", allMethods, Modifier.ABSTRACT, Modifier.STATIC, overrides);
+		sum |= printSummaryMethods(cls.isInterface() ? "Interface Methods" : "Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC, overrides);
+		sum |= printSummaryMethods("Static Methods", allMethods, Modifier.STATIC, 0, overrides);
+		
+		if(!sum) {
+			out.println("<p class=\"overrides\">Nothing to show.</p>");
+		}
 		
 		out.println("</div>");
 		
@@ -147,14 +151,12 @@ public class ClassDocWriter extends HtmlWriter {
 			printHierarchy(c.superclassType());
 			out.println(" &#11208;");
 		}
-		out.print("<code>");
 		if(c==cls) {
 			out.print(cls.name());
 			printTypeParams(cls.typeParameters());
 		}
 		else
 			out.print(typeString(t));
-		out.print("</code>");
 	}
 
 	private void printClassHierarchy() {
@@ -223,17 +225,18 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 	}
 
-	private void printSummaryFields(String title, List<? extends FieldDoc> list, int mods, int noMods) {
+	private boolean printSummaryFields(String title, List<? extends FieldDoc> list, int mods, int noMods) {
 		ArrayList<FieldDoc> fields = new ArrayList<>();
 		for(FieldDoc met : list) {
 			int m = met.modifierSpecifier();
 			if((m&mods)==mods && (m&noMods)==0)
 				fields.add(met);
 		}
-		printFieldList(title, fields, false);
+		return printFieldList(title, fields, false);
 	}
 
-	private void printSummaryMethods(String title, List<? extends ExecutableMemberDoc> list, int mods, int noMods) {
+	private boolean printSummaryMethods(String title, List<? extends ExecutableMemberDoc> list,
+			int mods, int noMods, HashMap<MethodDoc, MethodDoc> overrides) {
 		ArrayList<ExecutableMemberDoc> mets = new ArrayList<>();
 		for(ExecutableMemberDoc met : list) {
 			int m = met.modifierSpecifier();
@@ -242,12 +245,12 @@ public class ClassDocWriter extends HtmlWriter {
 			if((m&mods)==mods && (m&noMods)==0)
 				mets.add(met);
 		}
-		printMethodList(title, mets);
+		return printMethodList(title, mets, overrides);
 	}
 
-	private void printInnerClasses() {
+	private boolean printInnerClasses() {
 		if(cls.innerClasses().length==0)
-			return;
+			return false;
 		out.println("<div class=\"summary-item\">");
 		out.printf("<h5>%s</h5>\n", "Nested Classes");
 		out.println("<table>");
@@ -278,23 +281,27 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		out.println("</table>");
 		out.println("</div>");
+		return true;
 	}
 	
 	private void collectInheritedMethods(ClassDoc c, List<MethodDoc> out, HashMap<MethodDoc, MethodDoc> overrides) {
+		for(MethodDoc cm : c.methods()) {
+			boolean overriden = false;
+			for(MethodDoc m : out) {
+				if(m.overrides(cm)) {
+					if(!overrides.containsKey(m))
+						overrides.put(m, cm);
+					overriden = true;
+					break;
+				}
+			}
+			if(!overriden)
+				out.add(cm);
+		}
 		if(c.superclass()!=null)
 			collectInheritedMethods(c.superclass(), out, overrides);
 		for(ClassDoc imp : c.interfaces())
 			collectInheritedMethods(imp, out, overrides);
-		for(MethodDoc cm : c.methods()) {
-			for(Iterator<MethodDoc> i=out.iterator(); i.hasNext();) {
-				MethodDoc m = i.next();
-				if(cm.overrides(m)) {
-					overrides.put(cm, m);
-					i.remove();
-				}
-			}
-			out.add(cm);
-		}
 	}
 	
 	private void collectInheritedFields(ClassDoc c, List<FieldDoc> out, HashSet<String> hideMask) {
@@ -316,9 +323,9 @@ public class ClassDocWriter extends HtmlWriter {
 		return met.isConstructor() && (met.position()==null || met.position().line()==met.containingClass().position().line());
 	}
 	
-	private void printFieldList(String title, List<? extends FieldDoc> list, boolean enumConstants) {
+	private boolean  printFieldList(String title, List<? extends FieldDoc> list, boolean enumConstants) {
 		if(list.isEmpty())
-			return;
+			return false;
 		out.println("<div class=\"summary-item\">");
 		out.printf("<h5>%s</h5>\n", title);
 		out.println("<table>");
@@ -370,7 +377,7 @@ public class ClassDocWriter extends HtmlWriter {
 				out.printf("<br/>Inherited from <code>%s</code>.", typeString(fld.containingClass()));
 			else {
 				Tag[] info = fld.firstSentenceTags();
-				if(info!=null && info.length>0) {
+				if(info.length>0) {
 					out.print("<br/>");
 					printCommentText(info);
 				}
@@ -381,11 +388,12 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		out.println("</table>");
 		out.println("</div>");
+		return true;
 	}
 	
-	private void printMethodList(String title, List<? extends ExecutableMemberDoc> list) {
+	private boolean printMethodList(String title, List<? extends ExecutableMemberDoc> list, HashMap<MethodDoc, MethodDoc> overrides) {
 		if(list.isEmpty())
-			return;
+			return false;
 		out.println("<div class=\"summary-item\">");
 		out.printf("<h5>%s</h5>\n", title);
 		out.println("<table>");
@@ -455,9 +463,17 @@ public class ClassDocWriter extends HtmlWriter {
 				out.printf("<br/>Inherited from <code>%s</code>.", typeString(met.containingClass()));
 			else {
 				Tag[] info = met.firstSentenceTags();
-				if(info!=null && info.length>0) {
+				if(info.length>0) {
 					out.print("<br/>");
 					printCommentText(info);
+				}
+				else {
+					ExecutableMemberDoc copy = getReplacementDoc(met, overrides.get(met));
+					info = copy.firstSentenceTags();
+					if(info.length>0) {
+						out.print("<br/>");
+						printCommentText(info);
+					}
 				}
 			}
 			out.println("</td></tr>");
@@ -466,6 +482,7 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		out.println("</table>");
 		out.println("</div>");
+		return true;
 	}
 	
 	private void printFieldDetails(FieldDoc fld) {
@@ -509,22 +526,21 @@ public class ClassDocWriter extends HtmlWriter {
 		printSince(met);
 		
 		if(overriden!=null) {
-			out.printf("<p class=\"overrides\">%s <code>%s</code></p>\n",
+			out.printf("<p class=\"overrides\">%s <code>%s</code>.",
 					overriden.isAbstract() || overriden.containingClass().isInterface() ? "Implements" : "Overrides",
 					memberLink(overriden));
 			
-			if(met.inlineTags().length==0 && met.tags().length==0)
-				met = overriden;
-		}
-		
-		if(met.inlineTags().length==0 && met.tags().length==0) {
-			// TODO special case: static Enum.values and Enum.valueOf
-			if(met.isMethod() && met.containingClass().isEnum()) {
-				if(met.isStatic() && met.name().equals("values") && met.signature().equals("()")) {
-				}
-				else if(met.isStatic() && met.name().equals("valueOf") && met.signature().equals("(java.lang.String)")) {
+			if(met.inlineTags().length==0 && met.tags().length==0) {
+				MethodDoc copy = overriden;
+				if(copy.inlineTags().length>0 || copy.tags().length>0) {
+					out.print(" Copied description:");
+					met = copy;
 				}
 			}
+			out.println("</p>");
+		}
+		else if(met.inlineTags().length==0 && met.tags().length==0) {
+			met = getReplacementDoc(met, null);
 		}
 
 		printCommentPar(met.inlineTags());

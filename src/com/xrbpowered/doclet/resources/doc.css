@@ -77,8 +77,9 @@ div.nav {
 	padding-right: 40px;
 }
 div.infocard {
+	font-size: 9pt;
 	margin: 32px 0px;
-	padding: 10px 12px;
+	padding: 10px 24px;
 	padding-bottom: 4px;
 	background-color: #fff;
 	border: 1px solid #ddd;

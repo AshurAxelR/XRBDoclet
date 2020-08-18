@@ -15,13 +15,14 @@ public class Doclet {
 	public static boolean start(RootDoc root) {
 		Options.loadOptions(root.options());
 		System.out.println("Using XRB powered custom doclet.");
+		FileUtils.createRoot();
 		
 		for(PackageDoc pkg : root.specifiedPackages())
 			listedPackages.add(pkg);
 		for(ClassDoc cls : root.classes())
 			listedClasses.add(cls);
 
-		new PackageIndexWriter(root.specifiedPackages()).createFile();
+		new PackageIndexWriter(root).createFile();
 		new ClassIndexWriter(root.classes()).createFile();
 		
 		for(PackageDoc pkg : root.specifiedPackages()) {
@@ -34,9 +35,10 @@ public class Doclet {
 			new ClassDocWriter(cls).createFile();
 		}
 
+		FileUtils.copyStyleFiles();
 		return true;
 	}
-
+	
 	public static int optionLength(String option) {
 		return Options.optionLength(option);
 	}

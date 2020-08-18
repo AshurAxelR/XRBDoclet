@@ -5,6 +5,7 @@ import java.util.Comparator;
 import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.ExecutableMemberDoc;
 import com.sun.javadoc.MemberDoc;
+import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.PackageDoc;
 import com.sun.javadoc.Parameter;
 import com.sun.javadoc.Type;
@@ -99,4 +100,19 @@ public class WriterUtils {
 			return mem.name();
 	}
 
+	public static ExecutableMemberDoc getReplacementDoc(ExecutableMemberDoc met, MethodDoc overriden) {
+		if(overriden!=null)
+			return overriden;
+		else {
+			// TODO special case: static Enum.values and Enum.valueOf
+			if(met.isMethod() && met.containingClass().isEnum()) {
+				if(met.isStatic() && met.name().equals("values") && met.signature().equals("()")) {
+				}
+				else if(met.isStatic() && met.name().equals("valueOf") && met.signature().equals("(java.lang.String)")) {
+				}
+			}
+		}
+		return met; // no replacement, return original
+	}
+	
 }
