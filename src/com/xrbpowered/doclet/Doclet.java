@@ -11,10 +11,13 @@ public class Doclet {
 
 	public static HashSet<ClassDoc> listedClasses = new HashSet<>();
 	public static HashSet<PackageDoc> listedPackages = new HashSet<>();
+
+	public static RootDoc rootDoc;
 	
 	public static boolean start(RootDoc root) {
+		rootDoc = root;
 		Options.loadOptions(root.options());
-		System.out.println("Using XRB powered custom doclet.");
+		root.printNotice("Using XRB powered custom doclet.");
 		FileUtils.createRoot();
 		
 		for(PackageDoc pkg : root.specifiedPackages())
@@ -26,12 +29,13 @@ public class Doclet {
 		new ClassIndexWriter(root.classes()).createFile();
 		
 		for(PackageDoc pkg : root.specifiedPackages()) {
-			System.out.println(pkg.name());
+			root.printNotice(pkg.name());
 			new PackageDocWriter(pkg).createFile();
+			FileUtils.copyDocFiles(pkg);
 		}
 		
 		for(ClassDoc cls : root.classes()) {
-			System.out.println(cls.qualifiedName());
+			root.printNotice(cls.qualifiedName());
 			new ClassDocWriter(cls).createFile();
 		}
 

@@ -1,5 +1,7 @@
 package com.xrbpowered.doclet;
 
+import static com.xrbpowered.doclet.Options.*;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -13,8 +15,7 @@ import java.io.PrintStream;
 import java.util.List;
 
 import com.sun.javadoc.PackageDoc;
-
-import static com.xrbpowered.doclet.Options.*;
+import com.sun.javadoc.SourcePosition;
 
 public abstract class FileUtils {
 	
@@ -41,8 +42,22 @@ public abstract class FileUtils {
 	}
 	
 	public static void copyStyleFiles() {
+		Doclet.rootDoc.printNotice("... Copying style files");
 		copyFileFallback(cssFile, defaultCSS, new File(root, "doc.css"));
 		copyFileFallback(jsFile, defaultJS, new File(root, "doc.js"));
+	}
+	
+	public static void copyDocFiles(PackageDoc pkg) {
+		// package must contain package-info.java or package.html in order to have source position
+		SourcePosition pos = pkg.position();
+		if(pos==null)
+			return;
+		File srcDir = new File(pos.file().getParentFile(), "doc-files");
+		if(srcDir.isDirectory()) {
+			Doclet.rootDoc.printNotice("... Copying doc files");
+			File destDir = new File(PackageLink.getPackageDir(pkg.name()), "doc-files");
+			copyDir(srcDir, destDir);
+		}
 	}
 	
 	private static byte[] loadBytes(InputStream s) throws IOException {
@@ -83,6 +98,23 @@ public abstract class FileUtils {
 		}
 	}
 
+	public static void copyDir(File src, File dest) {
+		if(!dest.exists())
+			dest.mkdirs();
+		File[] files = src.listFiles();
+		for(File f : files) {
+			String name = f.getName();
+			File df = new File(dest, name);
+			if(f.isDirectory()) {
+				if(!name.startsWith("."))
+					copyDir(f, df);
+			}
+			else {
+				copyFile(f, df);
+			}
+		}
+	}
+	
 	public static void copyFile(File src, File dest) {
 		try {
 			InputStream in = new FileInputStream(src);
@@ -104,7 +136,7 @@ public abstract class FileUtils {
 				return;
 			}
 			else
-				System.err.printf("File not found: %s\nUsing default replacement.\n", src.getAbsolutePath());
+				Doclet.rootDoc.printWarning(String.format("File not found: %s\nUsing default replacement.\n", src.getAbsolutePath()));
 		}
 		copyResource(fallbackClassPath, dest);
 	}

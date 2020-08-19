@@ -291,19 +291,20 @@ public abstract class HtmlWriter {
 				out.printf("<code>%s</code>", s);
 			}
 			else {
-				String s = t.text()
-					.replaceAll("\\<pre\\>", "</p><pre>")
-					.replaceAll("\\<\\/pre\\>", "</pre><p>")
-					.replaceAll("\\<p\\>", "</p><p>");
+				String s = t.text();
+				if(s.contains("<script")) {
+					Doclet.rootDoc.printWarning("Not allowed to have <script> in comments. Did you forget &lt; or {@code}?");
+					s = s.replaceAll("\\<script.*?\\</script.*?\\>", "");
+				}
 				out.print(s);
 			}
 		}
 	}
 
 	public void printCommentPar(Tag[] tags) {
-		out.print("<div class=\"comment\"><p>");
+		out.print("<div class=\"comment\"><p>"); // using only opening <p> within this block (for back/compat)
 		printCommentText(tags);
-		out.println("</p></div>");
+		out.println("</div>");
 	}
 	
 	public static String currentDate() {

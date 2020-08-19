@@ -146,6 +146,8 @@ public class ClassDocWriter extends HtmlWriter {
 			out.println("</dd>");
 		}
 		printKnownSubclasses();
+		printKnownImplementing(true);
+		printKnownImplementing(false);
 		String infoCard = endTmpOut(oldOut);
 		if(!infoCard.isEmpty()) {
 			out.println("<div class=\"infocard\"><dl>");
@@ -199,13 +201,7 @@ public class ClassDocWriter extends HtmlWriter {
 	private void printSuperinterfaces() {
 		List<ClassDoc> list = new ArrayList<>();
 		collectSuperInterfaces(cls, list, null);
-		list.sort(classSort);
-		
-		if(!list.isEmpty()) {
-			out.printf("<dt>All %s:</dt><dd>", cls.isInterface() ? "superinterfaces" : "implemented interfaces");
-			printPlainClassList(list);
-			out.println("</dd>");
-		}
+		printPlainClassList("All "+(cls.isInterface() ? "superinterfaces" : "implemented interfaces"), list);
 	}
 	
 	private void printKnownSubclasses() {
@@ -216,14 +212,37 @@ public class ClassDocWriter extends HtmlWriter {
 			if(c.superclass()==this.cls)
 				list.add(c);
 		}
+		printPlainClassList("Known direct subclasses", list);
+	}
+
+	private void printKnownImplementing(boolean interfaces) {
+		if(!cls.isInterface())
+			return;
+		List<ClassDoc> list = new ArrayList<>();
+		for(ClassDoc c : Doclet.listedClasses) {
+			if(c.isInterface()==interfaces) {
+				for(ClassDoc i : c.interfaces()) {
+					if(i==this.cls) {
+						list.add(c);
+						break;
+					}
+				}
+			}
+		}
+		printPlainClassList("Known direct "+(interfaces ? "subinterfaces" : "implementing classes"), list);
+	}
+
+	private void printPlainClassList(String dt, List<ClassDoc> list) {
 		if(!list.isEmpty()) {
 			list.sort(classSort);
-			out.print("<dt>Known direct subclasses:</dt><dd>");
+			out.print("<dt>");
+			out.print(dt);
+			out.print(":</dt><dd>");
 			printPlainClassList(list);
 			out.println("</dd>");
 		}
 	}
-	
+
 	private void printPlainClassList(List<ClassDoc> list) {
 		boolean first = true;
 		for(ClassDoc c : list) {
