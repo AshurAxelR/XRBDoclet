@@ -498,7 +498,7 @@ public class ClassDocWriter extends HtmlWriter {
 					out.print("<br/>");
 					printCommentLine(info);
 				}
-				else {
+				else if(overrides!=null) {
 					ExecutableMemberDoc copy = getReplacementDoc(met, overrides.get(met));
 					info = copy.firstSentenceTags();
 					if(info.length>0) {
@@ -559,7 +559,23 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		out.printf("<span class=\"name\">%s</span> (", met.name());
 		printMethodSignature(met, true, false);
-		out.println(");</pre>");
+		out.print(")");
+		Type[] throwTypes = met.thrownExceptionTypes();
+		if(throwTypes.length>0) {
+			out.print(" throws ");
+			if(throwTypes.length==1)
+				out.print(typeString(throwTypes[0]));
+			else {
+				boolean first = true;
+				for(Type tt : throwTypes) {
+					if(!first) out.print(",");
+					out.print("\n\t");
+					out.print(typeString(tt));
+					first = false;
+				}
+			}
+		}
+		out.println(";</pre>");
 		
 		printSince(met);
 		
