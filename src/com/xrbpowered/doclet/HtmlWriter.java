@@ -9,6 +9,8 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sun.javadoc.ClassDoc;
 import com.sun.javadoc.Doc;
@@ -117,6 +119,10 @@ public abstract class HtmlWriter {
 		}
 	}
 
+	public void printNothingHere() {
+		out.println("<p class=\"overrides\">Nothing to show.</p>");
+	}
+	
 	public void printSince(Doc doc) {
 		for(Tag t : doc.tags("@since")) {
 			out.printf("<p class=\"since\">Since: %s</p>\n", t.text());
@@ -278,8 +284,29 @@ public abstract class HtmlWriter {
 			}
 		}
 	}
+
+	private static final Pattern blockTags = Pattern.compile("(p)|(h\\d)|(ul)|(ol)|(dl)|(hr)|(pre)|(blockquote)|(table)|(div)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern scriptTag = Pattern.compile("script", Pattern.CASE_INSENSITIVE);
+	private static final Pattern scriptStrip = Pattern.compile("\\<script.*?\\</script.*?\\>", Pattern.CASE_INSENSITIVE+Pattern.MULTILINE+Pattern.DOTALL);
 	
-	public void printCommentText(Tag[] tags) {
+	private static int findHtmlTags(String s, Pattern tagPattern) {
+		Matcher m = tagPattern.matcher(s);
+		int n = s.length();
+		int start = 0;
+		while(start<n) {
+			int tagStart = s.indexOf('<', start);
+			if(tagStart<0 || tagStart==n)
+				return -1;
+			m.region(tagStart+1, n);
+			if(m.lookingAt())
+				return tagStart;
+			else
+				start = tagStart+1;
+		}
+		return 0;
+	}
+	
+	public void printCommentText(Tag[] tags, boolean stopOnBlock) {
 		for(Tag t : tags) {
 			if(t instanceof SeeTag)
 				out.print(tagLink((SeeTag) t));
@@ -292,22 +319,44 @@ public abstract class HtmlWriter {
 			}
 			else {
 				String s = t.text();
-				if(s.contains("<script")) {
+				if(findHtmlTags(s, scriptTag)>=0) {
 					Doclet.rootDoc.printWarning("Not allowed to have <script> in comments. Did you forget &lt; or {@code}?");
-					s = s.replaceAll("\\<script.*?\\</script.*?\\>", "");
+					s = scriptStrip.matcher(s).replaceAll("");
+				}
+				if(stopOnBlock) {
+					int end = findHtmlTags(s, blockTags);
+					if(end>=0) {
+						out.print(s.substring(0, end));
+						return;
+					}
 				}
 				out.print(s);
 			}
 		}
 	}
 
+	public void printCommentLine(Tag[] tags) {
+		printCommentText(tags, true);
+	}
+
 	public void printCommentPar(Tag[] tags) {
 		out.print("<div class=\"comment\"><p>"); // using only opening <p> within this block (for back/compat)
-		printCommentText(tags);
+		printCommentText(tags, false);
 		out.println("</div>");
 	}
 	
 	public static String currentDate() {
 		return new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime());
+	}
+	
+	public static void main(String[] args) {
+		String s = "test html <B>tags</b><P><scRipt type=\"javascript\">\n"
+				+ "I am script!!!"
+				+ "</script>\n"
+				+ "I am good";
+		if(findHtmlTags(s, scriptTag)>=0) {
+			s = scriptStrip.matcher(s).replaceAll("");
+		}
+		System.out.println(s);
 	}
 }

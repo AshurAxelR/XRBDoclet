@@ -30,12 +30,15 @@ public class PackageDocWriter extends HtmlWriter {
 		out.println("<div class=\"summary\">");
 		out.println("<h2>Summary</h2>");
 		
-		printClassList("Interfaces", pkg.interfaces());
-		printClassList("Enums", pkg.enums());
-		printClassList("Classes", pkg.ordinaryClasses());
-		printClassList("Exceptions", pkg.exceptions());
-		printClassList("Errors", pkg.errors());
-		printClassList("Annotations", pkg.annotationTypes());
+		boolean sum = false;
+		sum |= printClassList("Interfaces", pkg.interfaces());
+		sum |= printClassList("Enums", pkg.enums());
+		sum |= printClassList("Classes", pkg.ordinaryClasses());
+		sum |= printClassList("Exceptions", pkg.exceptions());
+		sum |= printClassList("Errors", pkg.errors());
+		sum |= printClassList("Annotations", pkg.annotationTypes());
+		if(!sum)
+			printNothingHere();
 
 		out.println("</div>");
 		
@@ -47,9 +50,9 @@ public class PackageDocWriter extends HtmlWriter {
 		return true;
 	}
 	
-	private void printClassList(String title, ClassDoc[] list) {
+	private boolean printClassList(String title, ClassDoc[] list) {
 		if(list.length==0)
-			return;
+			return false;
 		Arrays.sort(list, classSort);
 		out.println("<div class=\"summary-item\">");
 		out.printf("<h5>%s</h5>\n", title);
@@ -80,7 +83,7 @@ public class PackageDocWriter extends HtmlWriter {
 			}
 			out.println("<td class=\"mods\">");
 			out.printf("<code><span class=\"name\">%s</span>", classLink(c));
-			printTypeParams(c.typeParameters(), true); // TODO compact type parameters
+			printTypeParams(c.typeParameters(), true);
 			out.print("</code>");
 			out.print("</td><td>\n");
 			if(isDeprecated(c))
@@ -88,7 +91,7 @@ public class PackageDocWriter extends HtmlWriter {
 			else {
 				Tag[] info = c.firstSentenceTags();
 				if(info.length>0)
-					printCommentText(info);
+					printCommentLine(info);
 			}
 			out.println("</td></tr>");
 			
@@ -96,6 +99,7 @@ public class PackageDocWriter extends HtmlWriter {
 		}
 		out.println("</table>");
 		out.println("</div>");
+		return true;
 	}
 	
 	@Override

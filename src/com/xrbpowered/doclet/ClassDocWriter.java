@@ -81,9 +81,8 @@ public class ClassDocWriter extends HtmlWriter {
 		sum |= printSummaryMethods(cls.isInterface() ? "Interface Methods" : "Instance Methods", allMethods, 0, Modifier.ABSTRACT | Modifier.STATIC, overrides);
 		sum |= printSummaryMethods("Static Methods", allMethods, Modifier.STATIC, 0, overrides);
 		
-		if(!sum) {
-			out.println("<p class=\"overrides\">Nothing to show.</p>");
-		}
+		if(!sum)
+			printNothingHere();
 		
 		out.println("</div>");
 		
@@ -303,7 +302,7 @@ public class ClassDocWriter extends HtmlWriter {
 			Tag[] info = c.firstSentenceTags();
 			if(info!=null && info.length>0) {
 				out.print("<br/>");
-				printCommentText(info);
+				printCommentLine(info);
 			}
 			out.println("</td></tr>");
 		}
@@ -409,7 +408,7 @@ public class ClassDocWriter extends HtmlWriter {
 				Tag[] info = fld.firstSentenceTags();
 				if(info.length>0) {
 					out.print("<br/>");
-					printCommentText(info);
+					printCommentLine(info);
 				}
 			}
 			out.println("</td></tr>");
@@ -497,14 +496,14 @@ public class ClassDocWriter extends HtmlWriter {
 				Tag[] info = met.firstSentenceTags();
 				if(info.length>0) {
 					out.print("<br/>");
-					printCommentText(info);
+					printCommentLine(info);
 				}
 				else {
 					ExecutableMemberDoc copy = getReplacementDoc(met, overrides.get(met));
 					info = copy.firstSentenceTags();
 					if(info.length>0) {
 						out.print("<br/>");
-						printCommentText(info);
+						printCommentLine(info);
 					}
 				}
 			}
@@ -591,7 +590,7 @@ public class ClassDocWriter extends HtmlWriter {
 			out.println("<dl class=\"code\">");
 			for(ParamTag t : met.paramTags()) {
 				out.printf("<dt><code>%s</code></dt><dd>", t.parameterName());
-				printCommentText(t.inlineTags());
+				printCommentText(t.inlineTags(), false);
 				out.println("</dd>");
 			}
 			out.println("</dl>");
@@ -599,7 +598,7 @@ public class ClassDocWriter extends HtmlWriter {
 		if(met.isMethod()) {
 			for(Tag t : met.tags("@return")) {
 				out.print("<h5>Returns</h5>\n<p class=\"ind\">");
-				printCommentText(t.inlineTags());
+				printCommentText(t.inlineTags(), false);
 			}
 		}
 		if(met.throwsTags().length>0) {
@@ -608,7 +607,7 @@ public class ClassDocWriter extends HtmlWriter {
 			for(ThrowsTag t : met.throwsTags()) {
 				out.printf("<dt><code>%s</code></dt><dd>",
 						t.exceptionType()==null ? t.exceptionName() : typeString(t.exceptionType()));
-				printCommentText(t.inlineTags());
+				printCommentText(t.inlineTags(), false);
 				out.println("</dd>");
 			}
 			out.println("</dl>");
@@ -676,7 +675,7 @@ public class ClassDocWriter extends HtmlWriter {
 			out.println("<dl class=\"code\">");
 			for(ParamTag t : ptags) {
 				out.printf("<dt><code>%s</code></dt><dd>", t.parameterName());
-				printCommentText(t.inlineTags());
+				printCommentText(t.inlineTags(), false);
 				out.println("</dd>");
 			}
 			out.println("</dl>");

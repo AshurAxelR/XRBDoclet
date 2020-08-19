@@ -33,30 +33,29 @@ public class PackageIndexWriter extends HtmlWriter {
 
 		out.println("<p><a href=\"allclasses.html\">List of all classes</a></p>");
 		
-		// overview
-		// FIXME root comment is always empty
-		/*
-		printSince(root);
-		printCommentPar(root.inlineTags());
-		printSeeTags(root);
-		*/
+		// TODO insert overview
 
 		// list of packages
 		out.println("<h2>Packages</h2>");
 
-		PackageLink link = PackageLink.root();
-		out.println("<table>");
-		for(PackageDoc pkg : pkgList) {
-			out.print("<tr><td>");
-			out.printf("<a href=\"%s%s.html\" title=\"%s\">%s</a>",
-					link.relativeLink(pkg.name()), PackageDocWriter.filename, pkg.name(), pkg.name());
-			out.println("</td><td>");
-			Tag[] info = pkg.firstSentenceTags();
-			if(info!=null && info.length>0)
-				printCommentText(info);
-			out.println("</td></tr>");
+		if(pkgList.isEmpty()) {
+			printNothingHere();
 		}
-		out.println("</table>");
+		else {
+			PackageLink link = PackageLink.root();
+			out.println("<table>");
+			for(PackageDoc pkg : pkgList) {
+				out.print("<tr><td>");
+				out.printf("<a href=\"%s%s.html\" title=\"%s\">%s</a>",
+						link.relativeLink(pkg.name()), PackageDocWriter.filename, pkg.name(), pkg.name());
+				out.println("</td><td>");
+				Tag[] info = pkg.firstSentenceTags();
+				if(info!=null && info.length>0)
+					printCommentLine(info);
+				out.println("</td></tr>");
+			}
+			out.println("</table>");
+		}
 		
 		printPageEnd();
 	}
