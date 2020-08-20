@@ -353,15 +353,4 @@ public abstract class HtmlWriter {
 	public static String currentDate() {
 		return new SimpleDateFormat("yyyy-MM-dd").format(Calendar.getInstance().getTime());
 	}
-	
-	public static void main(String[] args) {
-		String s = "test html <B>tags</b><P><scRipt type=\"javascript\">\n"
-				+ "I am script!!!"
-				+ "</script>\n"
-				+ "I am good";
-		if(findHtmlTags(s, scriptTag)>=0) {
-			s = scriptStrip.matcher(s).replaceAll("");
-		}
-		System.out.println(s);
-	}
 }
