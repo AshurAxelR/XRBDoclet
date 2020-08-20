@@ -82,8 +82,7 @@ public class PackageDocWriter extends HtmlWriter {
 				out.println("</td>");
 			}
 			out.println("<td class=\"mods\">");
-			out.printf("<code><span class=\"name\">%s</span>", classLink(c));
-			printTypeParams(c.typeParameters(), true);
+			out.printf("<code><span class=\"name\">%s</span>%s", classLink(c, false), typeParamsString(c.typeParameters()));
 			out.print("</code>");
 			out.print("</td><td>\n");
 			if(isDeprecated(c))

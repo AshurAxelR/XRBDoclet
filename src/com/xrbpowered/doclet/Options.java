@@ -11,6 +11,8 @@ public class Options {
 	public static String cssFile = null;
 	public static String jsFile = null;
 	
+	public static boolean date = false;
+	
 	public static void loadOptions(String[][] options) {
 		for(String[] opt : options) {
 			switch(opt[0]) {
@@ -26,6 +28,9 @@ public class Options {
 				case "-js":
 					jsFile = opt[1];
 					break;
+				case "-date":
+					date = true;
+					break;
 			}
 		}
 	}
@@ -37,6 +42,8 @@ public class Options {
 			case "-css":
 			case "-js":
 				return 2;
+			case "-date":
+				return 1;
 			default:
 				return 0;
 		}

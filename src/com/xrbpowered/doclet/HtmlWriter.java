@@ -57,7 +57,8 @@ public abstract class HtmlWriter {
 		
 		// page header
 		out.printf("<!DOCTYPE html>\n<html>\n<head>\n<title>%s</title>\n", title);
-		out.printf("<meta name=\"date\" content=\"%s\">\n", currentDate());
+		if(Options.date)
+			out.printf("<meta name=\"date\" content=\"%s\">\n", currentDate());
 		out.println("<meta charset=\"UTF-8\" />");
 		out.println("<meta name=\"viewport\" content=\"width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0\" />");
 		out.printf("<link rel=\"stylesheet\" href=\"%sdoc.css\" />\n", rootLink);
@@ -151,14 +152,19 @@ public abstract class HtmlWriter {
 	}
 
 	public String classLink(ClassDoc cls) {
+		return classLink(cls, true);
+	}
+
+	public String classLink(ClassDoc cls, boolean params) {
 		String name = cls.name();
 		if(cls.isAnnotationType())
 			name = "@"+name;
+		String pstr = params ? typeParamsString(cls.typeParameters(), true) : "";
 		if(Doclet.listedClasses.contains(cls))
-			return String.format("<a href=\"%s\" title=\"%s\">%s</a>",
-					link().relativeLink(cls), cls.qualifiedName(), name);
+			return String.format("<a href=\"%s\" title=\"%s\">%s</a>%s",
+					link().relativeLink(cls), cls.qualifiedName(), name, pstr);
 		else
-			return String.format("<a class=\"extern\" title=\"%s\">%s</a>", cls.qualifiedName(), name);
+			return String.format("<a class=\"extern\" title=\"%s\">%s</a>%s", cls.qualifiedName(), name, pstr);
 	}
 
 	public String memberLink(MemberDoc mem) {
@@ -231,39 +237,38 @@ public abstract class HtmlWriter {
 			if(cls==null)
 				sb.append(type.simpleTypeName());
 			else
-				sb.append(classLink(cls));
+				sb.append(classLink(cls, false));
 		}
+		
 		ParameterizedType ptype = type.asParameterizedType();
-		if(ptype!=null) {
-			Type[] pars = ptype.typeArguments();
-			sb.append("&lt;");
-			for(int i=0; i<pars.length; i++) {
-				if(i>0)
-					sb.append(", ");
-				sb.append(typeString(pars[i], false, compact));
-			}
-			sb.append("&gt;");
-		}
+		if(ptype!=null)
+			sb.append(typeParamsString(ptype.typeArguments(), compact));
+		
 		if(isVarArg && !type.dimension().isEmpty())
 			sb.append("...");
 		else
 			sb.append(type.dimension());
+		
 		return sb.toString();
 	}
 
-	public void printTypeParams(TypeVariable[] tpars) {
-		printTypeParams(tpars, false);
+	public String typeParamsString(Type[] tpars) {
+		return typeParamsString(tpars, false);
 	}
 
-	public void printTypeParams(TypeVariable[] tpars, boolean compact) {
+	public String typeParamsString(Type[] tpars, boolean compact) {
 		if(tpars!=null && tpars.length>0) {
-			out.print("&lt;");
+			StringBuilder sb = new StringBuilder();
+			sb.append("&lt;");
 			for(int i=0; i<tpars.length; i++) {
-				if(i>0) out.print(", ");
-				out.print(typeString(tpars[i], false, compact));
+				if(i>0) sb.append(", ");
+				sb.append(typeString(tpars[i], false, compact));
 			}
-			out.print("&gt; ");
+			sb.append("&gt;");
+			return sb.toString();
 		}
+		else
+			return "";
 	}
 	
 	public String tagLink(SeeTag see) {
@@ -274,7 +279,7 @@ public abstract class HtmlWriter {
 		else {
 			ClassDoc c = see.referencedClass();
 			if(c!=null)
-				return String.format(codeFmt, classLink(c));
+				return String.format(codeFmt, classLink(c, true));
 			else {
 				PackageDoc pkg = see.referencedPackage();
 				if(pkg!=null)

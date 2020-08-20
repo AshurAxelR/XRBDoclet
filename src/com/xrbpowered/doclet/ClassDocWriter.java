@@ -114,8 +114,7 @@ public class ClassDocWriter extends HtmlWriter {
 			out.print(cls.modifiers());
 		if(!cls.isInterface() && !cls.isAnnotationType())
 			out.print(cls.isEnum() ? " enum" : " class");
-		out.printf(" <span class=\"name\">%s</span>", cls.name());
-		printTypeParams(cls.typeParameters());
+		out.printf(" <span class=\"name\">%s%s</span>", cls.name(), typeParamsString(cls.typeParameters()));
 		out.println();
 		if(cls.superclass()!=null
 				&& !cls.superclass().qualifiedName().equals("java.lang.Object")
@@ -163,7 +162,7 @@ public class ClassDocWriter extends HtmlWriter {
 		}
 		if(c==cls) {
 			out.print(cls.name());
-			printTypeParams(cls.typeParameters());
+			out.print(typeParamsString(cls.typeParameters(), true));
 		}
 		else
 			out.print(typeString(t));
@@ -247,7 +246,6 @@ public class ClassDocWriter extends HtmlWriter {
 		for(ClassDoc c : list) {
 			if(!first) out.print(", ");
 			out.print(classLink(c));
-			printTypeParams(c.typeParameters(), true);
 			first = false;
 		}
 	}
@@ -296,7 +294,6 @@ public class ClassDocWriter extends HtmlWriter {
 			out.println("</td><td>");
 			
 			out.printf("<code><span class=\"name\">%s</span>", classLink(c));
-			printTypeParams(c.typeParameters());
 			out.print("</code>\n");
 			
 			Tag[] info = c.firstSentenceTags();
@@ -403,7 +400,7 @@ public class ClassDocWriter extends HtmlWriter {
 			if(isDeprecated(fld))
 				out.print("<br/><span class=\"depr\">Deprecated</span>");
 			else if(inherited)
-				out.printf("<br/>Inherited from <code>%s</code>.", typeString(fld.containingClass()));
+				out.printf("<br/>Inherited from <code>%s</code>.", classLink(fld.containingClass()));
 			else {
 				Tag[] info = fld.firstSentenceTags();
 				if(info.length>0) {
@@ -468,7 +465,7 @@ public class ClassDocWriter extends HtmlWriter {
 					out.print(mods[i]);
 					out.print(" ");
 				}
-				printTypeParams(met.typeParameters());
+				out.print(typeParamsString(met.typeParameters()));
 				if(met.isMethod())
 					out.print(typeString(((MethodDoc) met).returnType()));
 				out.println("</code></td>");
@@ -491,7 +488,7 @@ public class ClassDocWriter extends HtmlWriter {
 			else if(defaultConstructor)
 				out.print("<br/>Default constructor.");
 			else if(inherited)
-				out.printf("<br/>Inherited from <code>%s</code>.", typeString(met.containingClass()));
+				out.printf("<br/>Inherited from <code>%s</code>.", classLink(met.containingClass()));
 			else {
 				Tag[] info = met.firstSentenceTags();
 				if(info.length>0) {
@@ -552,7 +549,7 @@ public class ClassDocWriter extends HtmlWriter {
 		printAnnotations(met);
 		out.print(met.modifiers());
 		out.print(" ");
-		printTypeParams(met.typeParameters());
+		out.print(typeParamsString(met.typeParameters()));
 		if(met.isMethod()) {
 			out.print(typeString(((MethodDoc) met).returnType()));
 			out.print(" ");
