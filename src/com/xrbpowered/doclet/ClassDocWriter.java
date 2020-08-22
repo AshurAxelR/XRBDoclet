@@ -114,7 +114,7 @@ public class ClassDocWriter extends HtmlWriter {
 			out.print(cls.modifiers());
 		if(!cls.isInterface() && !cls.isAnnotationType())
 			out.print(cls.isEnum() ? " enum" : " class");
-		out.printf(" <span class=\"name\">%s%s</span>", cls.name(), typeParamsString(cls.typeParameters()));
+		out.printf(" <span class=\"name\">%s</span>%s", cls.name(), typeParamsString(cls.typeParameters()));
 		out.println();
 		if(cls.superclass()!=null
 				&& !cls.superclass().qualifiedName().equals("java.lang.Object")
@@ -430,7 +430,7 @@ public class ClassDocWriter extends HtmlWriter {
 		boolean hasMods = false;
 		for(ExecutableMemberDoc met : list) {
 			int m = met.modifierSpecifier() & ~Modifier.PUBLIC;
-			if(!cls.isInterface() && met.containingClass().isInterface())
+			if(!cls.isInterface() && met.containingClass().isInterface() && !met.isStatic())
 				m |= Modifier.ABSTRACT;
 			mods[i] = Modifier.toString(m);
 			if(met.isMethod() || !mods[i].isEmpty() || met.typeParameters().length>0)

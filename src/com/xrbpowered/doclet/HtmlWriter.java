@@ -142,8 +142,14 @@ public abstract class HtmlWriter {
 			out.println("</p>");
 		}
 	}
-	
+
 	public String packageLink(PackageDoc pkg) {
+		return packageLink(pkg, null);
+	}
+
+	public String packageLink(PackageDoc pkg, String label) {
+		if(label==null || label.isEmpty())
+			label = pkg.name();
 		if(Doclet.listedPackages.contains(pkg))
 			return String.format("<a href=\"%s\" title=\"%s\">%s</a>",
 					link().relativeLink(pkg.name()), pkg.name(), pkg.name());
@@ -152,13 +158,19 @@ public abstract class HtmlWriter {
 	}
 
 	public String classLink(ClassDoc cls) {
-		return classLink(cls, true);
+		return classLink(cls, true, null);
 	}
 
-	public String classLink(ClassDoc cls, boolean params) {
+	public String classLink(ClassDoc cls, String label) {
+		return classLink(cls, true, label);
+	}
+
+	public String classLink(ClassDoc cls, boolean params, String label) {
 		String name = cls.name();
 		if(cls.isAnnotationType())
 			name = "@"+name;
+		if(label==null || label.isEmpty())
+			label = name;
 		String pstr = params ? typeParamsString(cls.typeParameters(), true) : "";
 		if(Doclet.listedClasses.contains(cls))
 			return String.format("<a href=\"%s\" title=\"%s\">%s</a>%s",
@@ -168,16 +180,22 @@ public abstract class HtmlWriter {
 	}
 
 	public String memberLink(MemberDoc mem) {
+		return memberLink(mem, null);
+	}
+
+	public String memberLink(MemberDoc mem, String label) {
 		ClassDoc cls = mem.containingClass();
 		boolean sameClass = doc()==cls || mem.isEnumConstant();
 		
 		String title = mem.qualifiedName();
-		String label = sameClass ? mem.name() : String.format("%s.%s", cls.name(), mem.name());
+		String name = sameClass ? mem.name() : String.format("%s.%s", cls.name(), mem.name());
 		if(mem instanceof ExecutableMemberDoc) {
 			ExecutableMemberDoc met = (ExecutableMemberDoc) mem;
 			title += met.signature();
-			label += met.flatSignature();
+			name += met.flatSignature();
 		}
+		if(label==null || label.isEmpty())
+			label = name;
 		
 		if(Doclet.listedClasses.contains(cls)) {
 			return String.format("<a href=\"%s#%s\" title=\"%s\">%s</a>",
@@ -237,7 +255,7 @@ public abstract class HtmlWriter {
 			if(cls==null)
 				sb.append(type.simpleTypeName());
 			else
-				sb.append(classLink(cls, false));
+				sb.append(classLink(cls, false, null));
 		}
 		
 		ParameterizedType ptype = type.asParameterizedType();
@@ -274,16 +292,16 @@ public abstract class HtmlWriter {
 	public String tagLink(SeeTag see) {
 		String codeFmt = see.name().equals("@linkplain") ? "%s" : "<code>%s</code>";
 		if(see.referencedMember()!=null) {
-			return String.format(codeFmt, memberLink(see.referencedMember()));
+			return String.format(codeFmt, memberLink(see.referencedMember(), see.label()));
 		}
 		else {
 			ClassDoc c = see.referencedClass();
 			if(c!=null)
-				return String.format(codeFmt, classLink(c, true));
+				return String.format(codeFmt, classLink(c, true, see.label()));
 			else {
 				PackageDoc pkg = see.referencedPackage();
 				if(pkg!=null)
-					return String.format(codeFmt, packageLink(pkg));
+					return String.format(codeFmt, packageLink(pkg, see.label()));
 				else
 					return see.text();
 			}
