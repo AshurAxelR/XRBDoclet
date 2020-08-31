@@ -47,19 +47,26 @@ public abstract class FileUtils {
 		copyFileFallback(jsFile, defaultJS, new File(root, "doc.js"));
 	}
 	
-	public static void copyDocFiles(PackageDoc pkg) {
+	private static void copyDocFiles(PackageDoc pkg, String notice, File destDir) {
 		// package must contain package-info.java or package.html in order to have source position
 		SourcePosition pos = pkg.position();
 		if(pos==null)
 			return;
 		File srcDir = new File(pos.file().getParentFile(), "doc-files");
 		if(srcDir.isDirectory()) {
-			Doclet.rootDoc.printNotice("... Copying doc files");
-			File destDir = new File(PackageLink.getPackageDir(pkg.name()), "doc-files");
+			Doclet.rootDoc.printNotice(notice);
 			copyDir(srcDir, destDir);
 		}
 	}
 	
+	public static void copyDocFiles(PackageDoc pkg) {
+		copyDocFiles(pkg, "... Copying doc files", new File(PackageLink.getPackageDir(pkg.name()), "doc-files"));
+	}
+
+	public static void copyOverviewDocFiles(PackageDoc pkg) {
+		copyDocFiles(pkg, "... Copying overview doc files", new File(root, "doc-files"));
+	}
+
 	private static byte[] loadBytes(InputStream s) throws IOException {
 		DataInputStream in = new DataInputStream(s);
 		byte bytes[] = new byte[in.available()];

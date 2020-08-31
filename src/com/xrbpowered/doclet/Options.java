@@ -1,5 +1,7 @@
 package com.xrbpowered.doclet;
 
+import com.sun.javadoc.PackageDoc;
+
 public class Options {
 
 	public static final String baseClassPath = "com/xrbpowered/doclet";
@@ -10,6 +12,7 @@ public class Options {
 	public static String docTitle = "API Reference";
 	public static String cssFile = null;
 	public static String jsFile = null;
+	public static String overviewPkg = "overview";
 	
 	public static boolean date = false;
 	
@@ -28,6 +31,9 @@ public class Options {
 				case "-js":
 					jsFile = opt[1];
 					break;
+				case "-overview":
+					overviewPkg = opt[1];
+					break;
 				case "-date":
 					date = true;
 					break;
@@ -41,12 +47,17 @@ public class Options {
 			case "-doctitle":
 			case "-css":
 			case "-js":
+			case "-overview":
 				return 2;
 			case "-date":
 				return 1;
 			default:
 				return 0;
 		}
+	}
+	
+	public static boolean isOverview(PackageDoc pkg) {
+		return pkg.name().equals(overviewPkg);
 	}
 
 }

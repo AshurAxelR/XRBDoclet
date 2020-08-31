@@ -20,8 +20,11 @@ public class Doclet {
 		root.printNotice("Using XRB powered custom doclet.");
 		FileUtils.createRoot();
 		
-		for(PackageDoc pkg : root.specifiedPackages())
+		for(PackageDoc pkg : root.specifiedPackages()) {
+			if(Options.isOverview(pkg))
+				continue;
 			listedPackages.add(pkg);
+		}
 		for(ClassDoc cls : root.classes())
 			listedClasses.add(cls);
 
@@ -29,6 +32,8 @@ public class Doclet {
 		new ClassIndexWriter(root.classes()).createFile();
 		
 		for(PackageDoc pkg : root.specifiedPackages()) {
+			if(Options.isOverview(pkg))
+				continue;
 			root.printNotice(pkg.name());
 			new PackageDocWriter(pkg).createFile();
 			FileUtils.copyDocFiles(pkg);

@@ -16,24 +16,34 @@ public class PackageIndexWriter extends HtmlWriter {
 	
 	public final RootDoc root;
 	public final List<PackageDoc> pkgList;
+	public PackageDoc overview = null;
 	
 	public PackageIndexWriter(RootDoc root) {
 		this.root = root;
 		pkgList = new ArrayList<>(root.specifiedPackages().length);
-		for(PackageDoc cls : root.specifiedPackages())
-			pkgList.add(cls);
+		for(PackageDoc pkg : root.specifiedPackages()) {
+			if(Options.isOverview(pkg))
+				overview = pkg;
+			else
+				pkgList.add(pkg);
+		}
 		pkgList.sort(packageSort);
 		
 		FileUtils.createPackageList(pkgList);
+		if(overview!=null)
+			FileUtils.copyOverviewDocFiles(overview);
 	}
 
 	@Override
 	public void print() {
 		printPageStart(Options.docTitle);
 
-		out.println("<p><a href=\"allclasses.html\">List of all classes</a></p>");
+		out.println("<div class=\"infocard\"><p><a href=\"allclasses.html\">List of all classes</a></p></div>");
 		
-		// TODO insert overview
+		if(overview!=null) {
+			printCommentPar(overview.inlineTags());
+			printSeeTags(overview);
+		}
 
 		// list of packages
 		out.println("<h2>Packages</h2>");
