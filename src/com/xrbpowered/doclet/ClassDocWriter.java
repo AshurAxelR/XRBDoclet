@@ -181,14 +181,14 @@ public class ClassDocWriter extends HtmlWriter {
 			uniques = new HashSet<>();
 		if(c.superclass()!=null) {
 			ClassDoc sup = c.superclass();
-			if(sup.isInterface() && !uniques.contains(sup)) {
+			if(sup.isInterface() && !uniques.contains(sup.qualifiedName())) {
 				uniques.add(sup.qualifiedName());
 				out.add(sup);
 			}
 			collectSuperInterfaces(sup, out, uniques);
 		}
 		for(ClassDoc sup : c.interfaces()) {
-			if(sup.isInterface() && !uniques.contains(sup)) {
+			if(sup.isInterface() && !uniques.contains(sup.qualifiedName())) {
 				uniques.add(sup.qualifiedName());
 				out.add(sup);
 			}
@@ -332,7 +332,7 @@ public class ClassDocWriter extends HtmlWriter {
 		if(hideMask==null)
 			hideMask = new HashSet<>();
 		for(FieldDoc m : c.fields()) {
-			if(hideMask.contains(m))
+			if(hideMask.contains(m.name()))
 				continue;
 			out.add(m);
 			hideMask.add(m.name());
