@@ -67,6 +67,9 @@ public class PackageIndexWriter extends HtmlWriter {
 			out.println("</table>");
 		}
 		
+		if(Options.date)
+			out.printf("<p class=\"date\">Generated %s</p>\n", currentDate());
+		
 		printPageEnd();
 	}
 

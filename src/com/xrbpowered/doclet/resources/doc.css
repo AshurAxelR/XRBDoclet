@@ -165,6 +165,12 @@ p {
 	text-align: justify;
 	margin: 8px 0px;
 }
+p.date {
+	font-size: 10pt;
+	text-align: right;
+	color: #999;
+	margin-top: 40px;
+}
 p.ind {
 	margin-left: 24px;
 }
