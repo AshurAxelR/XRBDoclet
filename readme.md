@@ -1,3 +1,4 @@
+**Download JAR file:** [xrbdoclet.jar](https://github.com/AshurAxelR/XRBDoclet/releases/download/v1.0/xrbdoclet.jar) (40.5 KB)
 
 Running custom doclet in Eclipse:
 
