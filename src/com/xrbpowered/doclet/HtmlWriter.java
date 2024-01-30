@@ -295,6 +295,9 @@ public abstract class HtmlWriter {
 			return String.format(codeFmt, memberLink(see.referencedMember(), see.label()));
 		}
 		else {
+			if(see.referencedMemberName()!=null)
+				codeFmt = String.format(codeFmt, "%s."+see.referencedMemberName());
+			
 			ClassDoc c = see.referencedClass();
 			if(c!=null)
 				return String.format(codeFmt, classLink(c, true, see.label()));
@@ -302,8 +305,13 @@ public abstract class HtmlWriter {
 				PackageDoc pkg = see.referencedPackage();
 				if(pkg!=null)
 					return String.format(codeFmt, packageLink(pkg, see.label()));
-				else
-					return see.text();
+				else {
+					String s = see.text();
+					int hash = s.indexOf('#');
+					if(hash>=0)
+						s = s.substring(0, hash);
+					return String.format(codeFmt, s);
+				}
 			}
 		}
 	}

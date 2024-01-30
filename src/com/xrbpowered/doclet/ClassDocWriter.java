@@ -475,8 +475,8 @@ public class ClassDocWriter extends HtmlWriter {
 			if(unknown || defaultConstructor)
 				out.printf("<code><span class=\"name\"><a class=\"extern\">%s</a></span> (", met.name());
 			else if(inherited)
-				out.printf("<code><span class=\"name\"><a href=\"%s.html#%s\">%s</a></span> (",
-						met.containingClass().name(), methodAnchor(met), met.name());
+				out.printf("<code><span class=\"name\"><a href=\"%s#%s\">%s</a></span> (",
+						link().relativeLink(met.containingClass()), methodAnchor(met), met.name());
 			else
 				out.printf("<code><span class=\"name\"><a href=\"#%s\">%s</a></span> (",
 						methodAnchor(met), met.name());
