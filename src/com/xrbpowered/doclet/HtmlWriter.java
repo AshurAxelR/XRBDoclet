@@ -350,6 +350,8 @@ public abstract class HtmlWriter {
 			}
 			else {
 				String s = t.text();
+				if(t.name().equals("@literal"))
+					s = s.trim();
 				if(findHtmlTags(s, scriptTag)>=0) {
 					Doclet.rootDoc.printWarning("Not allowed to have <script> in comments. Did you forget &lt; or {@code}?");
 					s = scriptStrip.matcher(s).replaceAll("");
